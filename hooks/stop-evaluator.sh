@@ -74,7 +74,7 @@ if [[ "${FACTORY_MODE}" == "story-factory" ]]; then
   if echo "${STOP_REASON}" | grep -qiE "story artifacts complete for ${STORY_KEY}|story artifacts complete|phase create-story complete for ${STORY_KEY}|phase create-story complete"; then
 
     # Read dependency declaration if the story factory wrote one
-    DEPS_FILE="${MAIN_WORKTREE}/_bmad-output/implementation-artifacts/${STORY_KEY}/deps.yaml"
+    DEPS_FILE="${BMAD_ARTIFACTS_BASE}/${STORY_KEY}/deps.yaml"
     if [[ -f "${DEPS_FILE}" ]]; then
       DECLARED_DEPS=$(python3 -c "
 import yaml

@@ -74,12 +74,12 @@ INSTRUCTIONS:
    - Interface contracts (inputs, outputs, API shapes)
    - Test stubs / acceptance-criteria checklists
    - Any architectural notes specific to this story
-2. Place ALL artifacts in: _bmad-output/implementation-artifacts/${STORY_KEY}/
+2. Place ALL artifacts in: ${BMAD_ARTIFACTS_BASE}/${STORY_KEY}/ (relative to worktree)
 3. DEPENDENCY ANALYSIS — this is critical:
    - Review the sprint context above and any prior story artifacts on disk
    - Determine which other stories THIS story depends on
    - A dependency exists if this story needs code, interfaces, or data from another story
-   - Write a file: _bmad-output/implementation-artifacts/${STORY_KEY}/deps.yaml
+   - Write a file: ${BMAD_ARTIFACTS_BASE}/${STORY_KEY}/deps.yaml
      containing exactly:
        depends_on:
          - "1-1"    # example: key of story this depends on

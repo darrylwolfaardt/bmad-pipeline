@@ -104,15 +104,15 @@ launch_worker() {
 
   # Copy story artifacts + sprint file
   mkdir -p "${wt_path}/_bmad-output/implementation-artifacts"
-  [[ -d "${MAIN_WORKTREE}/_bmad-output/implementation-artifacts/${story_key}" ]] && \
-    cp -r "${MAIN_WORKTREE}/_bmad-output/implementation-artifacts/${story_key}" \
+  [[ -d "${BMAD_ARTIFACTS_BASE}/${story_key}" ]] && \
+    cp -r "${BMAD_ARTIFACTS_BASE}/${story_key}" \
           "${wt_path}/_bmad-output/implementation-artifacts/" 2>/dev/null || true
   # Copy dependency artifacts too
   local deps
   deps=$(get_story_dependencies "${story_key}")
   for dep in ${deps}; do
-    [[ -d "${MAIN_WORKTREE}/_bmad-output/implementation-artifacts/${dep}" ]] && \
-      cp -r "${MAIN_WORKTREE}/_bmad-output/implementation-artifacts/${dep}" \
+    [[ -d "${BMAD_ARTIFACTS_BASE}/${dep}" ]] && \
+      cp -r "${BMAD_ARTIFACTS_BASE}/${dep}" \
             "${wt_path}/_bmad-output/implementation-artifacts/" 2>/dev/null || true
   done
   [[ -f "${SPRINT_FILE}" ]] && \
@@ -139,6 +139,7 @@ launch_worker() {
     cd "${wt_path}" && \
     BMAD_FACTORY_MODE=build-worker \
     BMAD_STORY_KEY="${story_key}" \
+    BMAD_TICKET="${BMAD_TICKET:-}" \
     BMAD_BASE_BRANCH="${BASE_BRANCH}" \
     BMAD_AUTO_PUSH="${BMAD_AUTO_PUSH:-false}" \
     BMAD_MAX_REVIEW_ITERATIONS="${BMAD_MAX_REVIEW_ITERATIONS:-3}" \

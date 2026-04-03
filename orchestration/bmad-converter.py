@@ -33,6 +33,7 @@ Status mapping:
     done          →  done
 """
 
+import os
 import sys
 import re
 import yaml
@@ -62,10 +63,20 @@ PIPELINE_TO_BMAD = {
 
 
 def find_paths(project_root: Path):
-    """Locate BMAD and pipeline sprint files."""
+    """Locate BMAD and pipeline sprint files.
+    
+    When BMAD_TICKET env var is set, paths are namespaced under the ticket:
+      _bmad-output/{TICKET}/implementation-artifacts/
+    Otherwise falls back to the default flat layout.
+    """
     main_wt = project_root / "main"
-    bmad_file = main_wt / "_bmad-output" / "implementation-artifacts" / "sprint-status.yaml"
-    pipeline_file = main_wt / "_bmad-output" / "implementation-artifacts" / "pipeline-status.yaml"
+    ticket = os.environ.get("BMAD_TICKET", "")
+    if ticket:
+        base = main_wt / "_bmad-output" / ticket / "implementation-artifacts"
+    else:
+        base = main_wt / "_bmad-output" / "implementation-artifacts"
+    bmad_file = base / "sprint-status.yaml"
+    pipeline_file = base / "pipeline-status.yaml"
     return bmad_file, pipeline_file
 
 

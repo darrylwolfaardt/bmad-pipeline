@@ -43,6 +43,7 @@ while [[ $# -gt 0 ]]; do
     --cleanup)              MODE="cleanup"; shift ;;
     --convert)              MODE="convert"; shift ;;
     --base)                 BASE_BRANCH="$2"; shift 2 ;;
+    --ticket|-t)            export BMAD_TICKET="$2"; shift 2 ;;
     --push)                 export BMAD_AUTO_PUSH="true"; shift ;;
     --help|-h)
       cat <<'USAGE'
@@ -57,6 +58,7 @@ Pipeline:
   --convert              Convert BMAD format only, then stop
 
 Options:
+  --ticket ID            Linear ticket / requirement ID (e.g., RZP-1029)
   --workers N            Max parallel build workers (default: 2)
   --factory-parallel N   Parallel story creation (default: 1 = sequential)
   --base BRANCH          Base branch for worktrees (default: main)
@@ -69,6 +71,13 @@ USAGE
     *) echo "Unknown: $1"; exit 1 ;;
   esac
 done
+
+# Re-source common.sh now that BMAD_TICKET may be set from --ticket flag
+if [[ -n "${BMAD_TICKET:-}" ]]; then
+  source "${MAIN_WORKTREE}/.claude/hooks/lib/common.sh"
+  mkdir -p "${BMAD_ARTIFACTS_BASE}/logs"
+  mkdir -p "${BMAD_PLANNING_BASE}"
+fi
 
 timestamp() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 log() { echo "[$(timestamp)] $*"; }
@@ -113,7 +122,7 @@ prepare_worktree() {
     ln -sfn "${MAIN_WORKTREE}/_bmad" "${target_dir}/_bmad" 2>/dev/null || true
   if [[ -d "${MAIN_WORKTREE}/_bmad-output" ]]; then
     mkdir -p "${target_dir}/_bmad-output/implementation-artifacts"
-    cp -r "${MAIN_WORKTREE}/_bmad-output/implementation-artifacts/"* \
+    cp -r "${BMAD_ARTIFACTS_BASE}/"* \
           "${target_dir}/_bmad-output/implementation-artifacts/" 2>/dev/null || true
   fi
 }
@@ -349,7 +358,7 @@ if [[ ${READY_COUNT} -gt 0 ]]; then
         log "  └── Done: ${story_key} → story-created (deps: ${deps:-none})"
       else
         log "  └── WARNING: ${story_key} still ${new_status}"
-        [[ -d "${MAIN_WORKTREE}/_bmad-output/implementation-artifacts/${story_key}" ]] && {
+        [[ -d "${BMAD_ARTIFACTS_BASE}/${story_key}" ]] && {
           update_story_status "${story_key}" "story-created"
           log "       Forced → story-created (artifacts exist)"
         }
@@ -373,7 +382,7 @@ if [[ ${READY_COUNT} -gt 0 ]]; then
             ns=$(get_story_status "${k}")
             log "  Factory done: ${k} → ${ns}"
             [[ "${ns}" != "story-created" ]] && \
-              [[ -d "${MAIN_WORKTREE}/_bmad-output/implementation-artifacts/${k}" ]] && \
+              [[ -d "${BMAD_ARTIFACTS_BASE}/${k}" ]] && \
               update_story_status "${k}" "story-created"
             unset "FACTORY_PIDS[${k}]"
           fi
@@ -404,7 +413,7 @@ if [[ ${READY_COUNT} -gt 0 ]]; then
       wait "${FACTORY_PIDS[$k]}" 2>/dev/null || true
       ns=$(get_story_status "${k}")
       [[ "${ns}" != "story-created" ]] && \
-        [[ -d "${MAIN_WORKTREE}/_bmad-output/implementation-artifacts/${k}" ]] && \
+        [[ -d "${BMAD_ARTIFACTS_BASE}/${k}" ]] && \
         update_story_status "${k}" "story-created"
     done
   fi
@@ -455,16 +464,18 @@ fi
 
 Your job is doc PROMOTION, not just review. You must:
 
-1. ANALYZE: Read completed story artifacts in _bmad-output/implementation-artifacts/ for all stories in this epic. Read the baseline docs at _bmad-output/planning-artifacts/ (prd.md, architecture.md, epics.md).
+1. ANALYZE: Read completed story artifacts in ${BMAD_ARTIFACTS_BASE}/ for all stories in this epic. Read the baseline docs at ${BMAD_BASELINE_BASE}/ (prd.md, architecture.md, epics.md). Also read the ticket sub-PRD at ${BMAD_PLANNING_BASE}/ if it exists and differs from baseline — reconcile what was built against what was specified.
 
-2. WRITE RETRO REPORT: Save to _bmad-output/implementation-artifacts/${epic}-retro-$(date +%Y-%m-%d).md with: what was built, what diverged from spec, lessons learned, action items.
+2. WRITE RETRO REPORT: Save to ${BMAD_ARTIFACTS_BASE}/${epic}-retro-$(date +%Y-%m-%d).md with: what was built, what diverged from spec, lessons learned, action items.
 
-3. PROMOTE TO BASELINE - this is the critical step. Update the living docs:
-   - _bmad-output/planning-artifacts/prd.md: mark delivered FRs/NFRs as DELIVERED, note scope changes
-   - _bmad-output/planning-artifacts/architecture.md: promote speculative decisions to PROVEN, add patterns discovered during implementation. Create this file if it does not exist, using architecture-notes from story artifacts.
-   - _bmad-output/planning-artifacts/epics.md: mark this epic as COMPLETED with summary
+3. PROMOTE TO BASELINE - this is the critical step. Update the BASELINE living docs (not the ticket sub-PRD):
+   - ${BMAD_BASELINE_BASE}/prd.md: mark delivered FRs/NFRs as DELIVERED, note scope changes
+   - ${BMAD_BASELINE_BASE}/architecture.md: promote speculative decisions to PROVEN, add patterns discovered during implementation. Create this file if it does not exist.
+   - ${BMAD_BASELINE_BASE}/epics.md: mark this epic as COMPLETED with summary
 
-4. The pipeline will handle the git log. Your changes to these baseline docs ARE the promotion. The next create-story session will read these updated docs and have an accurate picture of the system.
+4. ARCHIVE: If a ticket sub-PRD exists at ${BMAD_PLANNING_BASE}/prd.md and it differs from baseline, add an ARCHIVED header with the date.
+
+5. The pipeline handles the git log. Your baseline doc changes ARE the promotion. The next create-story reads these updated docs for accurate context.
 
 Do NOT ask for confirmation. Proceed autonomously. When complete, state: Phase retrospective complete for ${epic}" \
           --model "${MODEL_REVIEW}" \
