@@ -111,10 +111,34 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════
 if [[ "${FACTORY_MODE}" == "retrospective" ]]; then
   if echo "${STOP_REASON}" | grep -qiE "phase retrospective complete|retrospective complete for ${STORY_KEY}"; then
+    # Commit the retro changeset as a single unit — baseline doc updates + retro report
+    EPIC_NUM=$(get_epic_number "${STORY_KEY}")
+    git -C "${MAIN_WORKTREE}" add -A _bmad-output/ 2>/dev/null || true
+    if ! git -C "${MAIN_WORKTREE}" diff --cached --quiet 2>/dev/null; then
+      git -C "${MAIN_WORKTREE}" commit -m "retro(${STORY_KEY}): promote epic ${EPIC_NUM} patterns to baseline
+
+Retrospective for ${STORY_KEY}: reconciled implementation against spec,
+promoted proven architecture decisions and delivered requirements to
+baseline docs, archived completed epic artifacts.
+
+This commit updates the system's self-knowledge so future create-story
+sessions work from accurate context." --no-verify 2>/dev/null || true
+      log_info "Retrospective commit: retro(${STORY_KEY})"
+    fi
     update_retro_status "${STORY_KEY}" "done"
     log_info "Retrospective: ${STORY_KEY} → done"
     echo '{"status": "retro-complete", "epic": "'"${STORY_KEY}"'"}'
     exit 0
+  fi
+
+  # Even without signal, if retro produced artifacts, commit and mark done
+  if ls "${MAIN_WORKTREE}/_bmad-output/implementation-artifacts/${STORY_KEY}-retro"* &>/dev/null; then
+    EPIC_NUM=$(get_epic_number "${STORY_KEY}")
+    git -C "${MAIN_WORKTREE}" add -A _bmad-output/ 2>/dev/null || true
+    if ! git -C "${MAIN_WORKTREE}" diff --cached --quiet 2>/dev/null; then
+      git -C "${MAIN_WORKTREE}" commit -m "retro(${STORY_KEY}): promote epic ${EPIC_NUM} patterns to baseline" --no-verify 2>/dev/null || true
+      log_info "Retrospective commit (forced): retro(${STORY_KEY})"
+    fi
   fi
 
   log_warn "Retrospective: ${STORY_KEY} session ended without completion signal"

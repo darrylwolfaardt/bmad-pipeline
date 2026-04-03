@@ -55,6 +55,16 @@ done
 # ---------------------------------------------------------------------------
 # 2. Worktree boundary enforcement
 # ---------------------------------------------------------------------------
+# Retrospective mode runs in main/ and needs to write baseline docs
+FACTORY_MODE=$(get_current_factory_mode 2>/dev/null || echo "")
+if [[ "${FACTORY_MODE}" == "retrospective" ]]; then
+  # Allow writes to _bmad-output in main worktree during retrospective
+  if echo "${FILE_PATH}" | grep -qE '_bmad-output'; then
+    log_info "File edit allowed (retrospective): ${FILE_PATH}"
+    exit 0
+  fi
+fi
+
 if [[ -n "${STORY_KEY}" ]]; then
   WT_PATH=$(worktree_path "${STORY_KEY}")
 

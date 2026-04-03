@@ -451,7 +451,22 @@ fi
         BMAD_FACTORY_MODE=retrospective \
         BMAD_STORY_KEY="${epic}" \
         run_claude_with_retry "retro:${epic}" \
-          -p "Run the BMAD retrospective for ${epic} (epic ${epic_num}). All stories in this epic are done. Review what was built, reconcile against the sub-PRD, and update baseline docs. Promote speculative architecture decisions to proven patterns. This is epic ${epic_num}. Do NOT ask for confirmation - proceed autonomously. When complete, state: Phase retrospective complete for ${epic}" \
+          -p "Run the BMAD retrospective for ${epic} (epic ${epic_num}). All stories in this epic are done.
+
+Your job is doc PROMOTION, not just review. You must:
+
+1. ANALYZE: Read completed story artifacts in _bmad-output/implementation-artifacts/ for all stories in this epic. Read the baseline docs at _bmad-output/planning-artifacts/ (prd.md, architecture.md, epics.md).
+
+2. WRITE RETRO REPORT: Save to _bmad-output/implementation-artifacts/${epic}-retro-$(date +%Y-%m-%d).md with: what was built, what diverged from spec, lessons learned, action items.
+
+3. PROMOTE TO BASELINE - this is the critical step. Update the living docs:
+   - _bmad-output/planning-artifacts/prd.md: mark delivered FRs/NFRs as DELIVERED, note scope changes
+   - _bmad-output/planning-artifacts/architecture.md: promote speculative decisions to PROVEN, add patterns discovered during implementation. Create this file if it does not exist, using architecture-notes from story artifacts.
+   - _bmad-output/planning-artifacts/epics.md: mark this epic as COMPLETED with summary
+
+4. The pipeline will handle the git log. Your changes to these baseline docs ARE the promotion. The next create-story session will read these updated docs and have an accurate picture of the system.
+
+Do NOT ask for confirmation. Proceed autonomously. When complete, state: Phase retrospective complete for ${epic}" \
           --model "${MODEL_REVIEW}" \
           --dangerously-skip-permissions \
           ${CLAUDE_FLAGS}
